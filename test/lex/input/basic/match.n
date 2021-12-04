@@ -1,0 +1,9 @@
+var i = 0
+match (i) {
+    0 => {
+        print(i)
+    },
+    _ => {
+        print("catch all")
+    },
+}
