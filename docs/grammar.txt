@@ -5,6 +5,9 @@ statement_block -> "{" statement_list "}"
 statement_list  -> statement
                  | statement statement_list;
 
+case_block -> "{" case_list "}"
+case_list  -> case_statement
+            | case_statement case_list;
 
 # Statements
 statement       -> variable_decl
@@ -12,6 +15,8 @@ statement       -> variable_decl
                  | "return" statement
                  | if_statement
                  | for_statement
+                 | match_statement
+                 | case_statement
                  | function_decl
                  | anonymous_decl
                  | import_statement ;
@@ -19,6 +24,8 @@ import_statement-> "import" STRING ;
 if_statement    -> "if" expression statement_block
                  | "if" expression statement ;
 for_statement   -> "for" ( IDENTIFIER "in" )? ( IDENTIFIER | STRING | tuple | range ) statement_block ;
+match_statement -> "match" ( IDENTIFIER | STRING | tuple | range ) case_block;
+case_statement  -> IDENTIFIER | STRING | NUMBER | FLOAT | tuple | "true" | "false" | "nil" | "_" => statement_block;
 function_decl   -> ( "/" "exported" "/" )? "fn" IDENTIFIER ( "(" variable_list ")" )* statement_block ;
 anonymous_decl  -> "fn" ( "(" variable_list ")" )* statement_block ;
 variable_list   -> IDENTIFIER ( "," variable_list )* ;
