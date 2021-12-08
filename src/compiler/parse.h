@@ -10,20 +10,34 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "util/location.h"
 #include "token.h"
 #include "lex.h"
-#include "util/location.h"
 
 // Data structure representing a node in our abstract syntax tree.
 typedef struct expr_t
 {
     enum
     {
-        AST_ASSIGN, AST_BINARY, AST_DECLARE, AST_UNARY,
-        AST_LITERAL, AST_GROUP, AST_STMT_LIST,
-        AST_FUNCTION_DECL, AST_FUNCTION_CALL,
-        AST_EXPR_LIST, AST_VAR_LIST, AST_MODULE,
-        AST_IF_STMT, AST_FOR_STMT, AST_TUPLE, AST_RANGE,
+        AST_ASSIGN,
+        AST_BINARY,
+        AST_DECLARE,
+        AST_UNARY,
+        AST_LITERAL,
+        AST_GROUP,
+        AST_STMT_LIST,
+        AST_CASE_LIST,
+        AST_FUNCTION_DECL,
+        AST_FUNCTION_CALL,
+        AST_EXPR_LIST,
+        AST_VAR_LIST,
+        AST_MODULE,
+        AST_IF_STMT,
+        AST_FOR_STMT,
+        AST_TUPLE,
+        AST_RANGE,
+        AST_MATCH_STMT,
+        AST_CASE_STMT
     } type;
 
     union
@@ -37,7 +51,7 @@ typedef struct expr_t
         struct
         {
             char *name;
-            struct expr_t* value;
+            struct expr_t *value;
         } assign;
 
         struct
@@ -51,7 +65,7 @@ typedef struct expr_t
         {
             token_t var_type;
             char *name;
-            struct expr_t *initial_value;            // NULL if not initialized
+            struct expr_t *initial_value; // NULL if not initialized
         } declare;
 
         struct
@@ -93,6 +107,19 @@ typedef struct expr_t
             struct expr_t *iterable;
             struct expr_t *body;
         } for_stmt;
+
+        struct
+        {
+            char *var;
+            struct expr_t *match_op;
+            struct expr_t *body;
+        } match_stmt;
+
+        struct
+        {
+            struct expr_t *condition;
+            struct expr_t *body;
+        } case_stmt;
 
         struct
         {

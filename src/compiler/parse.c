@@ -13,10 +13,14 @@
 // Forward declarations
 ast_t *statement_block(scan_context_t *);
 ast_t *statement_list(scan_context_t *);
+ast_t *case_block(scan_context_t *);
+ast_t *case_list(scan_context_t *);
 ast_t *statement(scan_context_t *);
 ast_t *import_statement(scan_context_t *);
 ast_t *if_statement(scan_context_t *);
 ast_t *for_statement(scan_context_t *);
+ast_t *match_statement(scan_context_t *);
+ast_t *case_statement(scan_context_t *);
 ast_t *function_decl(scan_context_t *);
 ast_t *anonymous_decl(scan_context_t *);
 ast_t *variable_decl(scan_context_t *);
@@ -58,107 +62,134 @@ void print_ast_internal(scan_context_t *context, ast_t *ast, int indent)
     if (indent > 0)
         printf("↳ ");
 
-    switch(ast->type)
+    switch (ast->type)
     {
-        case AST_ASSIGN:
-            token_val = ast->op.assign.name;
-            printf("ASSIGN(IDENTIFIER) -> %s\n", token_val);
-            print_ast_internal(context, ast->op.assign.value, indent + 2);
-            break;
-        case AST_BINARY:
-            printf("BINARY(%s)\n", token_name(ast->op.binary.operator));
-            print_ast_internal(context, ast->op.binary.left, indent + 2);
-            print_ast_internal(context, ast->op.binary.right, indent + 2);
-            break;
-        case AST_DECLARE:
-            token_val = ast->op.declare.name;
-            printf("DECLARE(%s) -> %s\n", token_value(context, ast->op.declare.var_type), token_val);
-            if (ast->op.declare.initial_value)
-            {
-                print_ast_internal(context, ast->op.declare.initial_value, indent + 2);
-            }
-            break;
-        case AST_UNARY:
-            printf("UNARY(%s)\n", token_name(ast->op.unary.operator));
-            print_ast_internal(context, ast->op.unary.operand, indent + 2);
-            break;
-        case AST_LITERAL:
-            printf("LITERAL(%s) -> %s\n", token_name(ast->op.literal.token), ast->op.literal.value);
-            break;
-        case AST_GROUP:
-            printf("GROUP\n");
-            print_ast_internal(context, ast->op.group, indent + 2);
-            break;
-        case AST_STMT_LIST:
-            printf("STMT LIST\n");
-            for (int i = 0; i < ast->op.list.size; i++)
-            {
-                print_ast_internal(context, ast->op.list.items[i], indent + 2);
-            }
-            break;
-        case AST_FUNCTION_DECL:
-            if (ast->op.fn.exported)
-                printf("EXPORTED ");
+    case AST_ASSIGN:
+        token_val = ast->op.assign.name;
+        printf("ASSIGN(IDENTIFIER) -> %s\n", token_val);
+        print_ast_internal(context, ast->op.assign.value, indent + 2);
+        break;
+    case AST_BINARY:
+        printf("BINARY(%s)\n", token_name(ast->op.binary.operator));
+        print_ast_internal(context, ast->op.binary.left, indent + 2);
+        print_ast_internal(context, ast->op.binary.right, indent + 2);
+        break;
+    case AST_DECLARE:
+        token_val = ast->op.declare.name;
+        printf("DECLARE(%s) -> %s\n", token_value(context, ast->op.declare.var_type), token_val);
+        if (ast->op.declare.initial_value)
+        {
+            print_ast_internal(context, ast->op.declare.initial_value, indent + 2);
+        }
+        break;
+    case AST_UNARY:
+        printf("UNARY(%s)\n", token_name(ast->op.unary.operator));
+        print_ast_internal(context, ast->op.unary.operand, indent + 2);
+        break;
+    case AST_LITERAL:
+        printf("LITERAL(%s) -> %s\n", token_name(ast->op.literal.token), ast->op.literal.value);
+        break;
+    case AST_GROUP:
+        printf("GROUP\n");
+        print_ast_internal(context, ast->op.group, indent + 2);
+        break;
+    case AST_STMT_LIST:
+        printf("STMT LIST\n");
+        for (int i = 0; i < ast->op.list.size; i++)
+        {
+            print_ast_internal(context, ast->op.list.items[i], indent + 2);
+        }
+        break;
+    case AST_FUNCTION_DECL:
+        if (ast->op.fn.exported)
+            printf("EXPORTED ");
 
-            printf("FUNCTION_DECL(%s)\n", ast->op.fn.name);
-            if (ast->op.fn.args != NULL)
-            {
-                print_ast_internal(context, ast->op.fn.args, indent + 2);
-            }
-            print_ast_internal(context, ast->op.fn.body, indent + 2);
-            break;
-        case AST_FUNCTION_CALL:
-            printf("CALL_FN(%s)\n", ast->op.call.name);
-            if (ast->op.call.args != NULL)
-            {
-                print_ast_internal(context, ast->op.call.args, indent + 2);
-            }
-            break;
-        case AST_VAR_LIST:
-        case AST_EXPR_LIST:
-            printf("ARGUMENTS\n");
-            for (int i = 0; i < ast->op.list.size; i++)
-            {
-                print_ast_internal(context, ast->op.list.items[i], indent + 2);
-            }
-            break;
+        printf("FUNCTION_DECL(%s)\n", ast->op.fn.name);
+        if (ast->op.fn.args != NULL)
+        {
+            print_ast_internal(context, ast->op.fn.args, indent + 2);
+        }
+        print_ast_internal(context, ast->op.fn.body, indent + 2);
+        break;
+    case AST_FUNCTION_CALL:
+        printf("CALL_FN(%s)\n", ast->op.call.name);
+        if (ast->op.call.args != NULL)
+        {
+            print_ast_internal(context, ast->op.call.args, indent + 2);
+        }
+        break;
+    case AST_VAR_LIST:
+    case AST_EXPR_LIST:
+        printf("ARGUMENTS\n");
+        for (int i = 0; i < ast->op.list.size; i++)
+        {
+            print_ast_internal(context, ast->op.list.items[i], indent + 2);
+        }
+        break;
 
-        case AST_TUPLE:
-            printf("TUPLE\n");
-            for (int i = 0; i < ast->op.list.size; i++)
-            {
-                print_ast_internal(context, ast->op.list.items[i], indent + 2);
-            }
-            break;
+    case AST_TUPLE:
+        printf("TUPLE\n");
+        for (int i = 0; i < ast->op.list.size; i++)
+        {
+            print_ast_internal(context, ast->op.list.items[i], indent + 2);
+        }
+        break;
 
-        case AST_IF_STMT:
-            printf("IF\n");
-            print_ast_internal(context, ast->op.if_stmt.condition, indent + 2);
-            print_ast_internal(context, ast->op.if_stmt.body, indent + 2);
-            break;
+    case AST_IF_STMT:
+        printf("IF\n");
+        print_ast_internal(context, ast->op.if_stmt.condition, indent + 2);
+        print_ast_internal(context, ast->op.if_stmt.body, indent + 2);
+        break;
 
-        case AST_FOR_STMT:
-            if (ast->op.for_stmt.var != NULL)
-            {
-                printf("FOR(%s)\n", ast->op.for_stmt.var);
-            }
-            else
-            {
-                printf("FOR\n");
-            }
-            print_ast_internal(context, ast->op.for_stmt.iterable, indent + 2);
-            print_ast_internal(context, ast->op.for_stmt.body, indent + 2);
-            break;
+    case AST_FOR_STMT:
+        if (ast->op.for_stmt.var != NULL)
+        {
+            printf("FOR(%s)\n", ast->op.for_stmt.var);
+        }
+        else
+        {
+            printf("FOR\n");
+        }
+        print_ast_internal(context, ast->op.for_stmt.iterable, indent + 2);
+        print_ast_internal(context, ast->op.for_stmt.body, indent + 2);
+        break;
 
-        case AST_RANGE:
-            printf("RANGE\n");
-            print_ast_internal(context, ast->op.range.begin, indent + 2);
-            print_ast_internal(context, ast->op.range.end, indent + 2);
-            break;
+    case AST_MATCH_STMT:
+        if (ast->op.match_stmt.var != NULL)
+        {
+            printf("MATCH(%s)\n", ast->op.match_stmt.var);
+        }
+        else
+        {
+            printf("MATCH\n");
+        }
+        print_ast_internal(context, ast->op.match_stmt.match_op, indent + 2);
+        print_ast_internal(context, ast->op.match_stmt.body, indent + 2);
+        break;
 
-        case AST_MODULE:
-            printf("IMPORT %s\n", ast->op.module.name);
-            break;
+    case AST_CASE_LIST:
+        printf("CASE LIST\n");
+        for (int i = 0; i < ast->op.list.size; i++)
+        {
+            print_ast_internal(context, ast->op.list.items[i], indent + 2);
+        }
+        break;
+
+    case AST_CASE_STMT:
+        printf("CASE\n");
+        print_ast_internal(context, ast->op.case_stmt.condition, indent + 2);
+        print_ast_internal(context, ast->op.case_stmt.body, indent + 2);
+        break;
+
+    case AST_RANGE:
+        printf("RANGE\n");
+        print_ast_internal(context, ast->op.range.begin, indent + 2);
+        print_ast_internal(context, ast->op.range.end, indent + 2);
+        break;
+
+    case AST_MODULE:
+        printf("IMPORT %s\n", ast->op.module.name);
+        break;
     }
 }
 
@@ -167,7 +198,7 @@ void print_ast(scan_context_t *context, ast_t *ast)
     print_ast_internal(context, ast, 0);
 }
 
-ast_t* make_assign_expr(char *name, ast_t *value)
+ast_t *make_assign_expr(char *name, ast_t *value)
 {
     ast_t *assign_expr = (ast_t *)malloc(sizeof(ast_t));
     assign_expr->type = AST_ASSIGN;
@@ -177,11 +208,11 @@ ast_t* make_assign_expr(char *name, ast_t *value)
     return assign_expr;
 }
 
-ast_t *make_binary_expr(ast_t *left, token_t operator, ast_t *right)
+ast_t *make_binary_expr(ast_t *left, token_t operator, ast_t * right)
 {
     ast_t *binary_expr = (ast_t *)malloc(sizeof(ast_t));
     binary_expr->type = AST_BINARY;
-    binary_expr->op.binary.operator = operator;
+    binary_expr->op.binary.operator= operator;
     binary_expr->op.binary.left = left;
     binary_expr->op.binary.right = right;
 
@@ -199,11 +230,11 @@ ast_t *make_declare_expr(token_t var_type, char *name, ast_t *initial_value)
     return declare_expr;
 }
 
-ast_t *make_unary_expr(token_t operator, ast_t *operand)
+ast_t *make_unary_expr(token_t operator, ast_t * operand)
 {
     ast_t *unary_expr = (ast_t *)malloc(sizeof(ast_t));
     unary_expr->type = AST_UNARY;
-    unary_expr->op.unary.operator = operator;
+    unary_expr->op.unary.operator= operator;
     unary_expr->op.unary.operand = operand;
 
     return unary_expr;
@@ -258,6 +289,16 @@ ast_t *make_list_expr(size_t capacity)
     return list_expr;
 }
 
+ast_t *make_case_list_expr(size_t capacity)
+{
+    ast_t *list_expr = (ast_t *)malloc(sizeof(ast_t));
+    list_expr->type = AST_CASE_LIST;
+    list_expr->op.list.size = 0;
+    list_expr->op.list.capacity = capacity;
+    list_expr->op.list.items = (ast_t **)malloc(sizeof(ast_t) * capacity);
+    return list_expr;
+}
+
 ast_t *make_if_expr(ast_t *condition, ast_t *body)
 {
     ast_t *if_expr = (ast_t *)malloc(sizeof(ast_t));
@@ -275,6 +316,25 @@ ast_t *make_for_expr(char *var, ast_t *iterable, ast_t *body)
     for_expr->op.for_stmt.iterable = iterable;
     for_expr->op.for_stmt.body = body;
     return for_expr;
+}
+
+ast_t *make_match_expr(char *var, ast_t *match_op, ast_t *body)
+{
+    ast_t *match_expr = (ast_t *)malloc(sizeof(ast_t));
+    match_expr->type = AST_MATCH_STMT;
+    match_expr->op.match_stmt.var = var;
+    match_expr->op.match_stmt.match_op = match_op;
+    match_expr->op.match_stmt.body = body;
+    return match_expr;
+}
+
+ast_t *make_case_expr(ast_t *condition, ast_t *body)
+{
+    ast_t *match_expr = (ast_t *)malloc(sizeof(ast_t));
+    match_expr->type = AST_CASE_STMT;
+    match_expr->op.case_stmt.condition = condition;
+    match_expr->op.case_stmt.body = body;
+    return match_expr;
 }
 
 ast_t *make_range_expr(ast_t *begin, ast_t *end)
@@ -305,7 +365,7 @@ void list_expr_append(ast_t *list, ast_t *item)
     list->op.list.items[list->op.list.size++] = item;
 }
 
-ast_t *statement_block(scan_context_t* context)
+ast_t *statement_block(scan_context_t *context)
 {
     ast_t *left;
     bool rewind = false;
@@ -347,7 +407,7 @@ ast_t *statement_block(scan_context_t* context)
     return left;
 }
 
-ast_t *statement_list(scan_context_t* context)
+ast_t *statement_list(scan_context_t *context)
 {
     ast_t *statements = make_list_expr(10);
 
@@ -404,6 +464,9 @@ ast_t *statement(scan_context_t *context)
         left = for_statement(context);
 
     if (left == NULL)
+        left = match_statement(context);
+
+    if (left == NULL)
         left = import_statement(context);
 
     if (peek(context).type == TOK_EOL)
@@ -419,6 +482,131 @@ ast_t *statement(scan_context_t *context)
         return left;
 
     return left;
+}
+
+ast_t *case_block(scan_context_t *context)
+{
+    ast_t *left;
+    bool rewind = false;
+
+    // Allow up to one EOL before the brace to account for coding style
+    // preferences.
+    if (peek(context).type == TOK_EOL)
+    {
+        accept(context);
+        rewind = true;
+    }
+
+    if (peek(context).type != TOK_L_BRACE)
+    {
+        backup(context);
+        return NULL;
+    }
+
+    accept(context);
+
+    while (peek(context).type == TOK_EOL)
+        accept(context);
+
+    left = case_list(context);
+
+    // TODO: Proper error handling
+    assert(left != NULL);
+
+    token_t invalid;
+    if ((invalid = accept(context)).type != TOK_R_BRACE)
+    {
+        char *error;
+        location_t loc = {invalid.start, invalid.end};
+        asprintf(&error, "Expected closing brace of case block (\"}\").");
+        printf("%s", format_error(context->name, context->buffer, error, loc));
+        exit(1);
+    }
+
+    return left;
+}
+
+ast_t *case_list(scan_context_t *context)
+{
+    ast_t *statements = make_case_list_expr(10);
+
+    ast_t *current = case_statement(context);
+
+    if (current == NULL)
+    {
+        return statements;
+    }
+
+    list_expr_append(statements, current);
+
+    while (peek(context).type != TOK_EOF && peek(context).type != TOK_EOF)
+    {
+        // If the next token is and EOL, consume it
+        if (peek(context).type == TOK_EOL)
+            accept(context);
+
+        // Now pull off the next statement
+        current = case_statement(context);
+
+        if (current != NULL)
+            list_expr_append(statements, current);
+        else
+            break;
+    }
+
+    return statements;
+}
+
+ast_t *case_statement(scan_context_t *context)
+{
+    // match a primary
+    if (match(context, 5, TOK_WILDCARD_CASE, TOK_STRING, TOK_NUMBER, TOK_TRUE, TOK_FALSE))
+    {
+        // accept what we are matching
+        ast_t *condition = primary(context);
+        if (peek(context).type != TOK_CASE)
+        {
+            backup(context);
+            return NULL;
+        }
+
+        // Pull off the "case" operator
+        token_t case_kw = accept(context);
+        assert(case_kw.type == TOK_CASE);
+
+        if (condition == NULL)
+        {
+            char *error;
+            accept(context);
+            location_t loc = {case_kw.end, case_kw.end + 1};
+            asprintf(&error, "Expected primary before case operator.");
+            printf("%s", format_error(context->name, context->buffer, error, loc));
+            exit(1);
+        }
+
+        ast_t *body = statement_block(context);
+
+        if (body == NULL)
+        {
+            body = statement(context);
+        }
+
+        if (body == NULL)
+        {
+            char *error;
+            accept(context);
+            location_t loc = {condition->location.end, condition->location.end + 1};
+            asprintf(&error, "Expected statement or body following case-statement.");
+            // TODO: Refactor error handling to handle custom "Found here." text
+            printf("%s", format_error(context->name, context->buffer, error, loc));
+            exit(1);
+        }
+
+        return make_case_expr(condition, body);
+    }
+
+    // not asure what the error case is here, maybe check for a catch all?
+    // assert(true == false);
 }
 
 ast_t *import_statement(scan_context_t *context)
@@ -543,6 +731,58 @@ ast_t *for_statement(scan_context_t *context)
     }
 
     return make_for_expr(var, iterable, body);
+}
+
+ast_t *match_statement(scan_context_t *context)
+{
+    char *var = NULL;
+    ast_t *match_op = NULL;
+    ast_t *body = NULL;
+
+    if (peek(context).type != TOK_MATCH)
+        return NULL;
+
+    token_t match_kw = accept(context);
+
+    token_t peek_type = peek(context);
+    if (peek_type.type == TOK_IDENTIFIER)
+    {
+        token_t t = accept(context);
+        var = token_value(context, t);
+        accept(context);
+        match_op = primary(context);
+    }
+
+    if (match_op == NULL && match(context, 3, TOK_STRING, TOK_L_PAREN, TOK_NUMBER))
+    {
+        match_op = primary(context);
+    }
+
+    if (match_op == NULL)
+    {
+        char *error;
+        token_t invalid = accept(context);
+        location_t loc = {match_kw.end, invalid.start};
+        asprintf(&error, "Expected comparable type after \"match\" keyword, found %s", token_name(peek_type));
+        // TODO: Refactor error handling to handle custom "Found here." text
+        printf("%s", format_error(context->name, context->buffer, error, loc));
+        exit(1);
+    }
+
+    body = case_block(context);
+
+    if (body == NULL)
+    {
+        char *error;
+        accept(context);
+        location_t loc = {match_op->location.end, match_op->location.end + 1};
+        asprintf(&error, "Expected statement or body following match statement.");
+        // TODO: Refactor error handling to handle custom "Found here." text
+        printf("%s", format_error(context->name, context->buffer, error, loc));
+        exit(1);
+    }
+
+    return make_match_expr(var, match_op, body);
 }
 
 ast_t *function_decl(scan_context_t *context)
@@ -746,7 +986,7 @@ ast_t *conjunction(scan_context_t *context)
 
     while (match(context, 2, TOK_AND, TOK_OR))
     {
-        token_t operator = accept(context);
+        token_t operator= accept(context);
         ast_t *right = equality(context);
         ast_t *new_left = make_binary_expr(left, operator, right);
         new_left->location.start = left->location.start;
@@ -763,7 +1003,7 @@ ast_t *equality(scan_context_t *context)
 
     while (match(context, 2, TOK_BANG_EQUAL, TOK_EQUAL_EQUAL))
     {
-        token_t operator = accept(context);
+        token_t operator= accept(context);
         ast_t *right = comparison(context);
         ast_t *new_left = make_binary_expr(left, operator, right);
         new_left->location.start = left->location.start;
@@ -780,7 +1020,7 @@ ast_t *comparison(scan_context_t *context)
 
     while (match(context, 4, TOK_GREATER, TOK_GREATER_EQUAL, TOK_LESS, TOK_LESS_EQUAL))
     {
-        token_t operator = accept(context);
+        token_t operator= accept(context);
         ast_t *right = term(context);
         ast_t *new_left = make_binary_expr(left, operator, right);
         new_left->location.start = left->location.start;
@@ -797,7 +1037,7 @@ ast_t *term(scan_context_t *context)
 
     while (match(context, 3, TOK_MINUS, TOK_PLUS, TOK_MODULO))
     {
-        token_t operator = accept(context);
+        token_t operator= accept(context);
         ast_t *right = term_md(context);
         ast_t *new_left = make_binary_expr(left, operator, right);
         new_left->location.start = left->location.start;
@@ -814,7 +1054,7 @@ ast_t *term_md(scan_context_t *context)
 
     while (match(context, 2, TOK_SLASH, TOK_ASTERISK))
     {
-        token_t operator = accept(context);
+        token_t operator= accept(context);
 
         if (operator.type == TOK_SLASH && peek(context).type == TOK_EXPORTED)
         {
@@ -835,7 +1075,7 @@ ast_t *unary(scan_context_t *context)
 {
     if (match(context, 2, TOK_BANG, TOK_MINUS))
     {
-        token_t operator = accept(context);
+        token_t operator= accept(context);
         ast_t *operand = unary(context);
         ast_t *unary = make_unary_expr(operator, operand);
         unary->location.start = operator.start;
@@ -871,7 +1111,7 @@ ast_t *primary(scan_context_t *context)
     if (left != NULL)
         return left;
 
-    if (match(context, 7, TOK_IDENTIFIER, TOK_NUMBER, TOK_FLOAT, TOK_STRING, TOK_TRUE, TOK_FALSE, TOK_NIL))
+    if (match(context, 8, TOK_IDENTIFIER, TOK_NUMBER, TOK_FLOAT, TOK_STRING, TOK_TRUE, TOK_FALSE, TOK_NIL, TOK_WILDCARD_CASE))
     {
         token_t tok = accept(context);
         ast_t *literal = make_literal_expr(tok);
@@ -976,7 +1216,7 @@ ast_t *member_access(scan_context_t *context)
         return NULL;
     }
 
-    token_t operator = accept(context);
+    token_t operator= accept(context);
 
     ast_t *right = function_call(context);
     if (right == NULL)
