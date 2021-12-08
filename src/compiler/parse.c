@@ -513,7 +513,7 @@ ast_t *for_statement(scan_context_t *context)
         }
     }
 
-    if (iterable == NULL && match(context, 2, TOK_STRING, TOK_L_PAREN, TOK_NUMBER))
+    if (iterable == NULL && match(context, 3, TOK_STRING, TOK_L_PAREN, TOK_NUMBER))
     {
         iterable = primary(context);
     }
