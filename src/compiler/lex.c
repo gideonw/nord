@@ -20,18 +20,18 @@ bool is_reserved(char c)
 {
     switch (c)
     {
-        case '(':
-        case ')':
-        case '{':
-        case '}':
-        case ':':
-        case ',':
-        case '*':
-        case '+':
-        case '/':
-        case '-':
-        case '=':
-            return true;
+    case '(':
+    case ')':
+    case '{':
+    case '}':
+    case ':':
+    case ',':
+    case '*':
+    case '+':
+    case '/':
+    case '-':
+    case '=':
+        return true;
     }
     return false;
 }
@@ -110,7 +110,7 @@ int match_number(const char *c)
     {
         if (*c < '0' || *c > '9')
         {
-            if (*c == '.' && *(c+1) == '.')
+            if (*c == '.' && *(c + 1) == '.')
                 return len;
             return 0;
         }
@@ -160,7 +160,8 @@ int match_string(const char *c)
     if (*c != '"')
         return 0;
 
-    do {
+    do
+    {
         len = len + 1;
         c = c + 1;
     } while (*c != '"');
@@ -173,8 +174,10 @@ int match_string(const char *c)
  */
 int match_right_arrow(const char *c)
 {
-    if (*c != '-') return 0;
-    if (*(c+1) != '>') return 0;
+    if (*c != '-')
+        return 0;
+    if (*(c + 1) != '>')
+        return 0;
 
     return 2;
 }
@@ -194,7 +197,8 @@ token_t peek(scan_context_t *context)
     if (context->lookahead.start >= position && position > 0)
         return context->lookahead;
 
-    do {
+    do
+    {
         char *c = context->buffer + position;
 
         start = position;
@@ -202,371 +206,398 @@ token_t peek(scan_context_t *context)
         token_found = true;
         switch (*c)
         {
-            case ' ':
-            case '\t':
-                advance = 1;
-                token_found = false;
-                break;
-            case '\0':
-                t.type = TOK_EOF;
-                advance = 1;
-                break;
-            case '\n':
-                t.type = TOK_EOL;
-                advance = 1;
-                break;
-            case '#':
+        case ' ':
+        case '\t':
+            advance = 1;
+            token_found = false;
+            break;
+        case '\0':
+            t.type = TOK_EOF;
+            advance = 1;
+            break;
+        case '\n':
+            t.type = TOK_EOL;
+            advance = 1;
+            break;
+        case '#':
+            c += 1;
+            advance = 1;
+            while (*c != '\n')
+            {
                 c += 1;
+                advance += 1;
+            }
+            token_found = false;
+            break;
+        case '=':
+            if (*(c + 1) == '=')
+            {
+                t.type = TOK_EQUAL_EQUAL;
+                advance = 2;
+                break;
+            }
+
+            if (*(c + 1) == '>')
+            {
+                t.type = TOK_CASE;
+                advance = 2;
+                break;
+            }
+
+            t.type = TOK_EQUAL;
+            advance = 1;
+            break;
+        case '!':
+            if (*(c + 1) == '=')
+            {
+                t.type = TOK_BANG_EQUAL;
+                advance = 2;
+                break;
+            }
+
+            t.type = TOK_BANG;
+            advance = 1;
+            break;
+        case '>':
+            if (*(c + 1) == '=')
+            {
+                t.type = TOK_GREATER_EQUAL;
+                advance = 2;
+                break;
+            }
+
+            t.type = TOK_GREATER;
+            advance = 1;
+            break;
+        case '<':
+            if (*(c + 1) == '=')
+            {
+                t.type = TOK_LESS_EQUAL;
+                advance = 2;
+                break;
+            }
+
+            t.type = TOK_LESS;
+            advance = 1;
+            break;
+        case '(':
+            t.type = TOK_L_PAREN;
+            advance = 1;
+            break;
+        case ')':
+            t.type = TOK_R_PAREN;
+            advance = 1;
+            break;
+        case '{':
+            t.type = TOK_L_BRACE;
+            advance = 1;
+            break;
+        case '}':
+            t.type = TOK_R_BRACE;
+            advance = 1;
+            break;
+        case ':':
+            t.type = TOK_COLON;
+            advance = 1;
+            break;
+        case ',':
+            t.type = TOK_COMMA;
+            advance = 1;
+            break;
+        case '-':
+            advance = match_right_arrow(c);
+            if (advance)
+            {
+                t.type = TOK_R_ARROW;
+                break;
+            }
+
+            t.type = TOK_MINUS;
+            advance = 1;
+            break;
+        case '+':
+            t.type = TOK_PLUS;
+            advance = 1;
+            break;
+        case '*':
+            t.type = TOK_ASTERISK;
+            advance = 1;
+            break;
+        case '/':
+            t.type = TOK_SLASH;
+            advance = 1;
+            break;
+        case '%':
+            t.type = TOK_MODULO;
+            advance = 1;
+            break;
+        case '_':
+            t.type = TOK_WILDCARD_CASE;
+            advance = 1;
+            break;
+        case '"':
+            advance = match_string(c);
+            if (advance)
+            {
+                t.type = TOK_STRING;
+            }
+            break;
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        case '.':
+            advance = match_number(c);
+            if (advance)
+            {
+                t.type = TOK_NUMBER;
+                break;
+            }
+
+            advance = match_float(c);
+            if (advance)
+            {
+                t.type = TOK_FLOAT;
+                break;
+            }
+
+            if (*c == '.' && *(c + 1) == '.')
+            {
+                t.type = TOK_DOT_DOT;
+                advance = 2;
+                break;
+            }
+
+            if (*c == '.')
+            {
+                t.type = TOK_DOT;
                 advance = 1;
-                while (*c != '\n')
-                {
-                    c += 1;
-                    advance += 1;
-                }
-                token_found = false;
                 break;
-            case '=':
-                if (*(c+1) == '=')
-                {
-                    t.type = TOK_EQUAL_EQUAL;
-                    advance = 2;
-                    break;
-                }
+            }
 
-                t.type = TOK_EQUAL;
-                advance = 1;
+            // We didn't match anything, so consume until we hit whitespace
+            advance = 1;
+            while (!is_whitespace(*(c + advance)))
+            {
+                advance = advance + 1;
+            }
+            t.type = TOK_INVALID;
+            break;
+        case 'a':
+            advance = match_keyword("and", c, 3);
+            if (advance)
+            {
+                t.type = TOK_AND;
                 break;
-            case '!':
-                if (*(c+1) == '=')
-                {
-                    t.type = TOK_BANG_EQUAL;
-                    advance = 2;
-                    break;
-                }
+            }
 
-                t.type = TOK_BANG;
-                advance = 1;
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            case '>':
-                if (*(c+1) == '=')
-                {
-                    t.type = TOK_GREATER_EQUAL;
-                    advance = 2;
-                    break;
-                }
+            }
+            break;
+        case 'e':
+            advance = match_keyword("exported", c, 8);
+            if (advance)
+            {
+                t.type = TOK_EXPORTED;
+                break;
+            }
 
-                t.type = TOK_GREATER;
-                advance = 1;
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            case '<':
-                if (*(c+1) == '=')
-                {
-                    t.type = TOK_LESS_EQUAL;
-                    advance = 2;
-                    break;
-                }
+            }
 
-                t.type = TOK_LESS;
-                advance = 1;
+            break;
+        case 'f':
+            if (*(c + 1) == 'n')
+            {
+                advance = 2;
+                t.type = TOK_FN;
                 break;
-            case '(':
-                t.type = TOK_L_PAREN;
-                advance = 1;
-                break;
-            case ')':
-                t.type = TOK_R_PAREN;
-                advance = 1;
-                break;
-            case '{':
-                t.type = TOK_L_BRACE;
-                advance = 1;
-                break;
-            case '}':
-                t.type = TOK_R_BRACE;
-                advance = 1;
-                break;
-            case ':':
-                t.type = TOK_COLON;
-                advance = 1;
-                break;
-            case ',':
-                t.type = TOK_COMMA;
-                advance = 1;
-                break;
-            case '-':
-                advance = match_right_arrow(c);
-                if (advance)
-                {
-                    t.type = TOK_R_ARROW;
-                    break;
-                }
+            }
 
-                t.type = TOK_MINUS;
-                advance = 1;
+            advance = match_keyword("for", c, 3);
+            if (advance)
+            {
+                t.type = TOK_FOR;
                 break;
-            case '+':
-                t.type = TOK_PLUS;
-                advance = 1;
+            }
+
+            advance = match_keyword("false", c, 5);
+            if (advance)
+            {
+                t.type = TOK_FALSE;
                 break;
-            case '*':
-                t.type = TOK_ASTERISK;
-                advance = 1;
+            }
+
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            case '/':
-                t.type = TOK_SLASH;
-                advance = 1;
+            }
+            break;
+        case 'i':
+            advance = match_keyword("if", c, 2);
+            if (advance)
+            {
+                t.type = TOK_IF;
                 break;
-            case '%':
-                t.type = TOK_MODULO;
-                advance = 1;
+            }
+
+            advance = match_keyword("in", c, 2);
+            if (advance)
+            {
+                t.type = TOK_IN;
                 break;
-            case '"':
-                advance = match_string(c);
-                if (advance)
-                {
-                    t.type = TOK_STRING;
-                }
+            }
+
+            advance = match_keyword("import", c, 6);
+            if (advance)
+            {
+                t.type = TOK_IMPORT;
                 break;
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-            case '.':
-                advance = match_number(c);
-                if (advance)
-                {
-                    t.type = TOK_NUMBER;
-                    break;
-                }
+            }
 
-                advance = match_float(c);
-                if (advance)
-                {
-                    t.type = TOK_FLOAT;
-                    break;
-                }
-
-                if (*c == '.' && *(c+1) == '.')
-                {
-                    t.type = TOK_DOT_DOT;
-                    advance = 2;
-                    break;
-                }
-
-                if (*c == '.')
-                {
-                    t.type = TOK_DOT;
-                    advance = 1;
-                    break;
-                }
-
-                // We didn't match anything, so consume until we hit whitespace
-                advance = 1;
-                while (!is_whitespace(*(c+advance)))
-                {
-                    advance = advance + 1;
-                }
-                t.type = TOK_INVALID;
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            case 'a':
-                advance = match_keyword("and", c, 3);
-                if (advance)
-                {
-                    t.type = TOK_AND;
-                    break;
-                }
-
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            }
+            break;
+        case 'l':
+            advance = match_keyword("let", c, 3);
+            if (advance)
+            {
+                t.type = TOK_LET;
                 break;
-            case 'e':
-                advance = match_keyword("exported", c, 8);
-                if (advance)
-                {
-                    t.type = TOK_EXPORTED;
-                    break;
-                }
+            }
 
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
-
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            case 'f':
-                if (*(c + 1) == 'n') {
-                    advance = 2;
-                    t.type = TOK_FN;
-                    break;
-                }
-
-                advance = match_keyword("for", c, 3);
-                if (advance)
-                {
-                    t.type = TOK_FOR;
-                    break;
-                }
-
-                advance = match_keyword("false", c, 5);
-                if (advance)
-                {
-                    t.type = TOK_FALSE;
-                    break;
-                }
-
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            }
+            break;
+        case 'n':
+            advance = match_keyword("nil", c, 3);
+            if (advance)
+            {
+                t.type = TOK_NIL;
                 break;
-            case 'i':
-                advance = match_keyword("if", c, 2);
-                if (advance)
-                {
-                    t.type = TOK_IF;
-                    break;
-                }
+            }
 
-                advance = match_keyword("in", c, 2);
-                if (advance)
-                {
-                    t.type = TOK_IN;
-                    break;
-                }
-
-                advance = match_keyword("import", c, 6);
-                if (advance)
-                {
-                    t.type = TOK_IMPORT;
-                    break;
-                }
-
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            case 'l':
-                advance = match_keyword("let", c, 3);
-                if (advance)
-                {
-                    t.type = TOK_LET;
-                    break;
-                }
-
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            }
+            break;
+        case 'm':
+            advance = match_keyword("match", c, 5);
+            if (advance)
+            {
+                t.type = TOK_MATCH;
                 break;
-            case 'n':
-                advance = match_keyword("nil", c, 3);
-                if (advance)
-                {
-                    t.type = TOK_NIL;
-                    break;
-                }
+            }
 
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            case 'o':
-                advance = match_keyword("or", c, 2);
-                if (advance)
-                {
-                    t.type = TOK_OR;
-                    break;
-                }
-
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            }
+            break;
+        case 'o':
+            advance = match_keyword("or", c, 2);
+            if (advance)
+            {
+                t.type = TOK_OR;
                 break;
-            case 'r':
-                advance = match_keyword("return", c, 6);
-                if (advance)
-                {
-                    t.type = TOK_RETURN;
-                    break;
-                }
+            }
 
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            case 't':
-                advance = match_keyword("true", c, 4);
-                if (advance)
-                {
-                    t.type = TOK_TRUE;
-                    break;
-                }
-
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            }
+            break;
+        case 'r':
+            advance = match_keyword("return", c, 6);
+            if (advance)
+            {
+                t.type = TOK_RETURN;
                 break;
-            case 'v':
-                advance = match_keyword("var", c, 3);
-                if (advance)
-                {
-                    t.type = TOK_VAR;
-                    break;
-                }
+            }
 
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
                 break;
-            default:
-                advance = match_identifier(c);
-                if (advance)
-                {
-                    t.type = TOK_IDENTIFIER;
-                    break;
-                }
+            }
+            break;
+        case 't':
+            advance = match_keyword("true", c, 4);
+            if (advance)
+            {
+                t.type = TOK_TRUE;
+                break;
+            }
 
-                // We didn't match anything, so consume until we hit whitespace
-                advance = 1;
-                while (!is_whitespace(*(c+advance)))
-                {
-                    advance = advance + 1;
-                }
-                t.type = TOK_INVALID;
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
+                break;
+            }
+            break;
+        case 'v':
+            advance = match_keyword("var", c, 3);
+            if (advance)
+            {
+                t.type = TOK_VAR;
+                break;
+            }
+
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
+                break;
+            }
+            break;
+        default:
+            advance = match_identifier(c);
+            if (advance)
+            {
+                t.type = TOK_IDENTIFIER;
+                break;
+            }
+
+            // We didn't match anything, so consume until we hit whitespace
+            advance = 1;
+            while (!is_whitespace(*(c + advance)))
+            {
+                advance = advance + 1;
+            }
+            t.type = TOK_INVALID;
         }
 
         // Advance our position
@@ -634,7 +665,7 @@ char *token_value(scan_context_t *context, token_t t)
     if (t.type == TOK_STRING)
     {
         memcpy(value, context->buffer + t.start + 1, len - 2);
-        value[len-2] = 0;
+        value[len - 2] = 0;
     }
     else
     {
@@ -655,11 +686,11 @@ token_list_t scan_input(char *path, char *input)
     token_t t;
     scan_context_t context = {path, input, 0};
 
-    do {
+    do
+    {
         t = accept(&context);
         token_list_add(&tokens, t);
     } while (t.type != TOK_EOF);
 
     return tokens;
 }
-
