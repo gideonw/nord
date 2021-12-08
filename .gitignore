@@ -7,3 +7,5 @@ run
 
 # macOS-related ignores
 .DS_Store
+
+.vscode
